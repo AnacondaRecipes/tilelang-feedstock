@@ -1,0 +1,8 @@
+# TVM is compiled from the bundled source tree; allow a long build
+task_timeout: 28800
+
+# TEMPORARY — remove before merge: staging channel for the torch-c-dlpack-ext
+# run dependency (AnacondaRecipes/torch-c-dlpack-ext-feedstock#1), which is not
+# yet published to pkgs/main.
+channels:
+  - https://staging.continuum.io/pbp/fs/torch-c-dlpack-ext-feedstock/pr1/4a7cfca96d22189f6c2e33fbc82c87ac7eb60fd2
