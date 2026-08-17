@@ -40,6 +40,10 @@ requirements:
     - {{ stdlib('c') }}
     - cmake >=3.26.1
     - ninja-base
+    # version_provider.py runs `git rev-parse` unguarded (FileNotFoundError if git
+    # is absent); with git present it fails gracefully and falls back to the
+    # sdist's .git_commit.txt
+    - git
     # upstream build requirement; CMake install also uses it to strip the
     # libcuda DT_NEEDED entry from the dlopen-stub libraries
     - patchelf >=0.17.2  # [linux]
