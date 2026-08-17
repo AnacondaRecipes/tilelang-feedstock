@@ -1,8 +1,8 @@
 # TVM is compiled from the bundled source tree; allow a long build
 task_timeout: 28800
 
-# TEMPORARY — remove before merge: staging channel for the torch-c-dlpack-ext
-# run dependency (AnacondaRecipes/torch-c-dlpack-ext-feedstock#1), which is not
-# yet published to pkgs/main.
+# TEMPORARY — remove before merge: staging channel for the fixed libz3/z3-solver
+# (AnacondaRecipes/z3prover-feedstock#2); the released libz3-4.15.4_0 carries a
+# spurious python_abi cp314 dep that breaks py3.10-3.13 host solves.
 channels:
-  - https://staging.continuum.io/pbp/fs/torch-c-dlpack-ext-feedstock/pr1/87feea507777de6659b8cbb70f63699ce782fe0d
+  - https://staging.continuum.io/pbp/fs/z3prover-feedstock/pr2/c099066a6aeafe998b3f69caba165307f23f878a
