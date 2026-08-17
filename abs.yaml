@@ -5,4 +5,4 @@ task_timeout: 28800
 # run dependency (AnacondaRecipes/torch-c-dlpack-ext-feedstock#1), which is not
 # yet published to pkgs/main.
 channels:
-  - https://staging.continuum.io/pbp/fs/torch-c-dlpack-ext-feedstock/pr1/cd5d4c80f95d1849af567d8a529fa76d590c3055
+  - https://staging.continuum.io/pbp/fs/torch-c-dlpack-ext-feedstock/pr1/87feea507777de6659b8cbb70f63699ce782fe0d

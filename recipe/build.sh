@@ -27,7 +27,7 @@ ${PYTHON} -m pip install . -vv --no-deps --no-build-isolation
 # rpath; conda-build relocates it to a relative path at packaging time.
 for lib in "${SP_DIR}"/tilelang/lib/*; do
     if [[ "$(uname)" == "Darwin" ]]; then
-        install_name_tool -add_rpath "${PREFIX}/lib" "${lib}" || true
+        install_name_tool -add_rpath "${PREFIX}/lib" "${lib}"
     else
         patchelf --add-rpath "${PREFIX}/lib" "${lib}"
     fi

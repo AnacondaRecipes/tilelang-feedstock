@@ -87,9 +87,24 @@ test:
     - tilelang
   requires:
     - pip
+    - pytest
+    # The JIT smoke test shells out to nvcc, which needs a host C++ compiler in
+    # the test env alongside the CUDA toolchain (triton-feedstock precedent)
+    - {{ compiler('cuda') }}  # [gpu_variant == "cuda"]
+    - {{ compiler('cxx') }}   # [gpu_variant == "cuda"]
+    # Metal smoke test allocates torch tensors on the mps device
+    - pytorch * gpu_mps*      # [gpu_variant == "metal"]
+  source_files:
+    - testing/conftest.py
+    - testing/python/kernel/test_tilelang_kernel_element_wise_add.py  # [gpu_variant == "cuda"]
+    - testing/python/metal/test_metal_codegen.py                      # [gpu_variant == "metal"]
   commands:
     - pip check
     - python -c "import tilelang; print(tilelang.__version__)"
+    # GPU smoke: codegen + runtime nvcc JIT + kernel run on the CI GPU
+    - pytest -v testing/python/kernel/test_tilelang_kernel_element_wise_add.py  # [gpu_variant == "cuda"]
+    # Metal smoke (auto-skips via requires_metal if no Metal device)
+    - pytest -v testing/python/metal/test_metal_codegen.py                      # [gpu_variant == "metal"]
 
 about:
   home: https://github.com/tile-ai/tilelang
