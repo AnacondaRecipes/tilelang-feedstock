@@ -21,7 +21,8 @@ build:
   # support (CUDA/HIP dlopen stubs are POSIX-only), and no macOS x86_64 wheels.
   # osx-64 is additionally unbuildable here: pytorch on pkgs/main osx-64 tops out
   # at 2.6 and apache-tvm-ffi is unavailable there.
-  skip: true  # [win or (osx and x86_64)]
+  # py<39 documents upstream's requires-python >=3.9 floor (build matrix starts at 3.10)
+  skip: true  # [win or (osx and x86_64) or py<39]
   number: {{ build_num }}
   string: {{ variant_tag }}_py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ build_num }}
   missing_dso_whitelist:
@@ -79,6 +80,7 @@ requirements:
     # dlopen CUDA stubs, and downstream CPU consumers (vllm) must stay installable,
     # so __cuda is not a hard run dep here.
     - __cuda  # [gpu_variant == "cuda"]
+    # upstream "vis" extra (matplotlib) is unbounded — nothing to constrain, omitted
 
 test:
   imports:
