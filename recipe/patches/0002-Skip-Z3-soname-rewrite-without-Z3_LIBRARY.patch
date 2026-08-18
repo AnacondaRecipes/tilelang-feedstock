@@ -1,0 +1,21 @@
+From: Anaconda Inc. <maintainers@anaconda.com>
+Subject: [PATCH] Skip the Z3 soname rewrite when Z3_LIBRARY is not set
+
+Z3_LIBRARY is only defined by the pip-layout FindZ3 module (USE_PYPI_Z3=ON).
+With config-mode z3 (conda Z3Config.cmake / z3::libz3) the library already
+carries a proper soname; patchelf --print-soname with an empty variable
+aborts configure with 'Failed to get Z3 soname using patchelf'.
+
+--- a/3rdparty/tvm/CMakeLists.txt
++++ b/3rdparty/tvm/CMakeLists.txt
+@@ -566,7 +566,9 @@
+     )
+   else()
+     find_program(PATCHELF_EXECUTABLE patchelf)
+-    if (PATCHELF_EXECUTABLE)
++    # Z3_LIBRARY is only set by the pip-layout FindZ3; config-mode z3 (conda)
++    # already has a correct soname and needs no rewrite.
++    if (PATCHELF_EXECUTABLE AND Z3_LIBRARY)
+       execute_process(
+         COMMAND ${PATCHELF_EXECUTABLE} --print-soname ${Z3_LIBRARY}
+         OUTPUT_VARIABLE Z3_SONAME

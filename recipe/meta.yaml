@@ -21,6 +21,9 @@ source:
     # toolchain; make the override conditional so build.sh can pass the
     # functional $BUILD_PREFIX/bin/nvcc wrapper
     - patches/0001-Respect-preset-CMAKE_CUDA_COMPILER.patch
+    # the tvm fork's Z3 soname rewrite assumes the pip z3 layout (Z3_LIBRARY
+    # set); with conda's config-mode libz3 there is nothing to rewrite
+    - patches/0002-Skip-Z3-soname-rewrite-without-Z3_LIBRARY.patch
 
 build:
   # Upstream supports Linux (CUDA/ROCm) and macOS arm64 (Metal) only: no Windows
