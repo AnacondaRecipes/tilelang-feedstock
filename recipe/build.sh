@@ -13,6 +13,12 @@ CMAKE_ARGS="${CMAKE_ARGS} -DUSE_PYPI_Z3=OFF"
 
 if [[ "${gpu_variant}" == "cuda" ]]; then
     CMAKE_ARGS="${CMAKE_ARGS} -DUSE_CUDA=ON"
+    # Upstream CMake force-sets CMAKE_CUDA_COMPILER to CUDAToolkit_BIN_DIR/nvcc.
+    # Root the toolkit at the build env so that resolves to $BUILD_PREFIX/bin/nvcc
+    # (the functional wrapper whose nvcc.profile locates cicc/nvvm); the raw copy
+    # under targets/<arch>/bin has a degenerate profile and dies with
+    # `sh: cicc: command not found` during CMake CUDA compiler identification.
+    CMAKE_ARGS="${CMAKE_ARGS} -DCUDAToolkit_ROOT=${BUILD_PREFIX}"
 elif [[ "${gpu_variant}" == "metal" ]]; then
     CMAKE_ARGS="${CMAKE_ARGS} -DUSE_METAL=ON"
 fi
