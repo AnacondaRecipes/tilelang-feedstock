@@ -57,6 +57,10 @@ requirements:
     - libz3 4.15.4
     - cuda-cudart-dev {{ cuda_compiler_version }}.*  # [gpu_variant == "cuda"]
     - cuda-nvrtc-dev {{ cuda_compiler_version }}.*   # [gpu_variant == "cuda"]
+    # host cuda_runtime.h does `#include "crt/host_config.h"`; the crt headers
+    # ship with the nvcc split packages, so without this CMake's CUDA compiler
+    # identification fails with `crt/host_config.h: No such file or directory`
+    - cuda-crt-dev_{{ target_platform }} {{ cuda_compiler_version }}.*  # [gpu_variant == "cuda"]
   run:
     - python
     # upstream: apache-tvm-ffi~=0.1.0,>=0.1.2
