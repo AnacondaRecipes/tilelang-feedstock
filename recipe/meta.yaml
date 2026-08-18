@@ -114,7 +114,7 @@ test:
     - {{ compiler('cxx') }}   # [gpu_variant == "cuda"]
   source_files:
     - testing/conftest.py
-    - testing/python/kernel/test_tilelang_kernel_element_wise_add.py  # [gpu_variant == "cuda"]
+    - testing/python/kernel/test_tilelang_kernel_element_wise_add.py  # [gpu_variant == "cuda" and x86_64]
     - testing/python/metal/test_metal_codegen_linux.py                # [gpu_variant == "metal"]
   commands:
     - pip check
@@ -122,8 +122,12 @@ test:
     # GPU smoke: codegen + runtime nvcc JIT + kernel run on the CI GPU.
     # Private TMPDIR + cleanup flag: tilelang keeps JIT debug tempdirs by
     # default under a shared /tmp/tvm-debug-mode-tempdirs parent, which fails
-    # with EACCES on reused CI workers where another user owns that dir
-    - TMPDIR=$(mktemp -d) TILELANG_CLEANUP_TEMP_FILES=1 pytest -v testing/python/kernel/test_tilelang_kernel_element_wise_add.py  # [gpu_variant == "cuda"]
+    # with EACCES on reused CI workers where another user owns that dir.
+    # x86_64-only: tilelang 0.1.9 device headers do not compile for sm_75
+    # (Turing) — bf16 __hfma overloads need sm_80+ and the SM75 cute MMA atom
+    # is missing — and the aarch64 CI GPUs are T4G (sm_75); linux-64 CI GPUs
+    # are sm_80+. Import + pip check still run on every platform.
+    - TMPDIR=$(mktemp -d) TILELANG_CLEANUP_TEMP_FILES=1 pytest -v testing/python/kernel/test_tilelang_kernel_element_wise_add.py  # [gpu_variant == "cuda" and x86_64]
     # Metal smoke: full lowering to Metal kernel source, no GPU runtime needed —
     # the run-on-device metal tests need torch MPS (macOS >=14) and CI Macs run 13
     - pytest -v testing/python/metal/test_metal_codegen_linux.py                # [gpu_variant == "metal"]
