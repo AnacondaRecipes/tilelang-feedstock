@@ -15,6 +15,12 @@ package:
 source:
   url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
   sha256: 287f727c913bb648fcf6c1968809ba3390e55eeed257a5c6bb9a80bc05966af4
+  patches:
+    # upstream unconditionally overrides CMAKE_CUDA_COMPILER with the raw
+    # targets/<arch>/bin/nvcc, which cannot locate cicc in conda's split
+    # toolchain; make the override conditional so build.sh can pass the
+    # functional $BUILD_PREFIX/bin/nvcc wrapper
+    - patches/0001-Respect-preset-CMAKE_CUDA_COMPILER.patch
 
 build:
   # Upstream supports Linux (CUDA/ROCm) and macOS arm64 (Metal) only: no Windows

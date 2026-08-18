@@ -19,6 +19,10 @@ if [[ "${gpu_variant}" == "cuda" ]]; then
     # under targets/<arch>/bin has a degenerate profile and dies with
     # `sh: cicc: command not found` during CMake CUDA compiler identification.
     CMAKE_ARGS="${CMAKE_ARGS} -DCUDAToolkit_ROOT=${BUILD_PREFIX}"
+    # FindCUDAToolkit still prefers the raw targets/<arch>/bin/nvcc even with
+    # the root hint; select the wrapper explicitly (patch 0001 makes upstream
+    # respect it)
+    CMAKE_ARGS="${CMAKE_ARGS} -DCMAKE_CUDA_COMPILER=${BUILD_PREFIX}/bin/nvcc"
 elif [[ "${gpu_variant}" == "metal" ]]; then
     CMAKE_ARGS="${CMAKE_ARGS} -DUSE_METAL=ON"
 fi
@@ -33,7 +37,11 @@ ${PYTHON} -m pip install . -vv --no-deps --no-build-isolation
 # rpath; conda-build relocates it to a relative path at packaging time.
 for lib in "${SP_DIR}"/tilelang/lib/*; do
     if [[ "$(uname)" == "Darwin" ]]; then
-        install_name_tool -add_rpath "${PREFIX}/lib" "${lib}"
+        # skip libs that already carry the rpath (CMake adds it on macOS for
+        # some targets); -add_rpath hard-errors on duplicates
+        if ! otool -l "${lib}" | grep -q "path ${PREFIX}/lib "; then
+            install_name_tool -add_rpath "${PREFIX}/lib" "${lib}"
+        fi
     else
         patchelf --add-rpath "${PREFIX}/lib" "${lib}"
     fi
