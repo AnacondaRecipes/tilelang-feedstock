@@ -86,6 +86,9 @@ requirements:
     - tqdm >=4.62.3
     - typing-extensions >=4.10.0
     - z3-solver >=4.13.0,<4.15.5
+    # libtvm links libz3 directly (soname libz3.so.4.15); pkgs/main libz3 has
+    # no run_exports, so the run dep must be explicit (overlinking check)
+    - libz3 >=4.15.4,<4.16.0a0
     # tilelang JIT-compiles generated kernels at runtime with nvcc (links -lcuda,
     # includes cuda_runtime.h / CCCL headers), so ship the toolchain in run
     - cuda-nvcc-tools {{ cuda_compiler_version }}.*  # [gpu_variant == "cuda"]
