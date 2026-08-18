@@ -118,7 +118,7 @@ test:
     - {{ compiler('cxx') }}   # [gpu_variant == "cuda"]
   source_files:
     - testing/conftest.py
-    - testing/python/kernel/test_tilelang_kernel_element_wise_add.py  # [gpu_variant == "cuda" and x86_64]
+    - testing/python/kernel/test_tilelang_kernel_element_wise_add.py  # [gpu_variant == "cuda"]
     - testing/python/metal/test_metal_codegen_linux.py                # [gpu_variant == "metal"]
   commands:
     - pip check
@@ -127,11 +127,11 @@ test:
     # Private TMPDIR + cleanup flag: tilelang keeps JIT debug tempdirs by
     # default under a shared /tmp/tvm-debug-mode-tempdirs parent, which fails
     # with EACCES on reused CI workers where another user owns that dir.
-    # x86_64-only: tilelang 0.1.9 device headers do not compile for sm_75
-    # (Turing) — bf16 __hfma overloads need sm_80+ and the SM75 cute MMA atom
-    # is missing — and the aarch64 CI GPUs are T4G (sm_75); linux-64 CI GPUs
-    # are sm_80+. Import + pip check still run on every platform.
-    - TMPDIR=$(mktemp -d) TILELANG_CLEANUP_TEMP_FILES=1 pytest -v testing/python/kernel/test_tilelang_kernel_element_wise_add.py  # [gpu_variant == "cuda" and x86_64]
+    # Compute-capability guard: tilelang 0.1.9 device headers do not compile
+    # for sm_75/Turing (bf16 __hfma needs sm_80+; SM75 cute MMA atom missing),
+    # and the CI GPU pools mix T4/T4G (sm_75) with sm_80+ workers — run the
+    # kernel test only on capable GPUs, skip loudly otherwise.
+    - CAP=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 | cut -d. -f1); if [ "${CAP:-0}" -ge 8 ]; then TMPDIR=$(mktemp -d) TILELANG_CLEANUP_TEMP_FILES=1 pytest -v testing/python/kernel/test_tilelang_kernel_element_wise_add.py; else echo "Skipping kernel smoke test - GPU is pre-sm_80 (tilelang 0.1.9 requires sm_80+)"; fi  # [gpu_variant == "cuda"]
     # Metal smoke: full lowering to Metal kernel source, no GPU runtime needed —
     # the run-on-device metal tests need torch MPS (macOS >=14) and CI Macs run 13
     - pytest -v testing/python/metal/test_metal_codegen_linux.py                # [gpu_variant == "metal"]
