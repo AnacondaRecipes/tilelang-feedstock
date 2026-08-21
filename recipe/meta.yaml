@@ -24,6 +24,10 @@ source:
     # the tvm fork's Z3 soname rewrite assumes the pip z3 layout (Z3_LIBRARY
     # set); with conda's config-mode libz3 there is nothing to rewrite
     - patches/0002-Skip-Z3-soname-rewrite-without-Z3_LIBRARY.patch
+    # avoid needing git in build: version_provider's `git rev-parse` raises
+    # FileNotFoundError without git; guarded, it falls back to the sdist's
+    # .git_commit.txt pin
+    - patches/0003-Tolerate-missing-git-in-version_provider.patch
 
 build:
   # Upstream supports Linux (CUDA/ROCm) and macOS arm64 (Metal) only: no Windows
@@ -49,10 +53,6 @@ requirements:
     - {{ stdlib('c') }}
     - cmake >=3.26.1
     - ninja-base
-    # version_provider.py runs `git rev-parse` unguarded (FileNotFoundError if git
-    # is absent); with git present it fails gracefully and falls back to the
-    # sdist's .git_commit.txt
-    - git
     # upstream build requirement; CMake install also uses it to strip the
     # libcuda DT_NEEDED entry from the dlopen-stub libraries
     - patchelf >=0.17.2  # [linux]
@@ -119,6 +119,7 @@ test:
   source_files:
     - testing/conftest.py
     - testing/python/kernel/test_tilelang_kernel_element_wise_add.py  # [gpu_variant == "cuda"]
+    - testing/python/cuda/test_cuda_f32x2_intrinsics.py               # [gpu_variant == "cuda"]
     - testing/python/metal/test_metal_codegen_linux.py                # [gpu_variant == "metal"]
   commands:
     - pip check
@@ -128,10 +129,16 @@ test:
     # default under a shared /tmp/tvm-debug-mode-tempdirs parent, which fails
     # with EACCES on reused CI workers where another user owns that dir.
     # Compute-capability guard: tilelang 0.1.9 device headers do not compile
-    # for sm_75/Turing (bf16 __hfma needs sm_80+; SM75 cute MMA atom missing),
-    # and the CI GPU pools mix T4/T4G (sm_75) with sm_80+ workers — run the
-    # kernel test only on capable GPUs, skip loudly otherwise.
+    # for sm_75/Turing (bf16 __hfma needs sm_80+; SM75 cute MMA atom missing).
+    # Current CI GPU pools (g4dn T4 / T4G) are all sm_75, so the on-device run
+    # only executes if the pools ever gain sm_80+ workers; the codegen test
+    # below covers the JIT path on every worker.
     - CAP=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 | cut -d. -f1); if [ "${CAP:-0}" -ge 8 ]; then TMPDIR=$(mktemp -d) TILELANG_CLEANUP_TEMP_FILES=1 pytest -v testing/python/kernel/test_tilelang_kernel_element_wise_add.py; else echo "Skipping kernel smoke test - GPU is pre-sm_80 (tilelang 0.1.9 requires sm_80+)"; fi  # [gpu_variant == "cuda"]
+    # JIT smoke that works on sm_75 workers: upstream's codegen-only tests
+    # lower + nvcc-compile at an explicit sm_80 target (no kernel execution,
+    # so no sm_80 GPU needed) and assert on the generated CUDA source —
+    # exercising the compiled codegen libs and the runtime nvcc toolchain
+    - TMPDIR=$(mktemp -d) TILELANG_CLEANUP_TEMP_FILES=1 pytest -v -k "codegen" testing/python/cuda/test_cuda_f32x2_intrinsics.py  # [gpu_variant == "cuda"]
     # Metal smoke: full lowering to Metal kernel source, no GPU runtime needed —
     # the run-on-device metal tests need torch MPS (macOS >=14) and CI Macs run 13
     - pytest -v testing/python/metal/test_metal_codegen_linux.py                # [gpu_variant == "metal"]
