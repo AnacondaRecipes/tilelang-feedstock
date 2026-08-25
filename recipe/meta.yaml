@@ -95,8 +95,11 @@ requirements:
     # no run_exports, so the run dep must be explicit (overlinking check)
     - libz3 >=4.15.4,<4.16.0a0
     # tilelang JIT-compiles generated kernels at runtime with nvcc (links -lcuda,
-    # includes cuda_runtime.h / CCCL headers), so ship the toolchain in run
-    - cuda-nvcc-tools {{ cuda_compiler_version }}.*  # [gpu_variant == "cuda"]
+    # includes cuda_runtime.h / CCCL headers), so ship the toolchain in run.
+    # cuda-nvcc-impl (not just cuda-nvcc-tools): the bare tools package lacks
+    # cicc and the crt headers in the targets/ layout nvcc's profile expects;
+    # verified end to end on a g5 A10G (sm_86) dev instance
+    - cuda-nvcc-impl {{ cuda_compiler_version }}.*   # [gpu_variant == "cuda"]
     - cuda-cudart-dev {{ cuda_compiler_version }}.*  # [gpu_variant == "cuda"]
     - cuda-cccl        # [gpu_variant == "cuda"]
     - cuda-driver-dev  # [gpu_variant == "cuda"]
