@@ -72,12 +72,13 @@ requirements:
     - cuda-crt-dev_{{ target_platform }} {{ cuda_compiler_version }}.*  # [gpu_variant == "cuda"]
   run:
     - python
-    # Pinned to the exact version built/tested against (upstream range is
-    # ~=0.1.0,>=0.1.2): apache-tvm-ffi may introduce breaking ABI changes in
-    # ANY new version, and tilelang compiles against its bundled tvm-ffi
-    # headers while loading libtvm_ffi from this package at runtime.
-    # Any build number/string of 0.1.9 is acceptable.
-    - apache-tvm-ffi ==0.1.9
+    # Pinned to the exact version tested against (upstream range is
+    # ~=0.1.0,>=0.1.2): apache-tvm-ffi may introduce breaking changes in ANY
+    # new version, and tilelang compiles against its bundled tvm-ffi headers
+    # while loading libtvm_ffi from this package at runtime. 0.1.10 is the
+    # combination upstream vllm ships with tilelang 0.1.9 (vllm pins
+    # tilelang==0.1.9 + apache-tvm-ffi==0.1.10). Any build number is fine.
+    - apache-tvm-ffi ==0.1.10
     - torch-c-dlpack-ext  # [py<314]
     - cloudpickle
     # upstream fp4 extra additionally wants ml_dtypes >=0.5.1
