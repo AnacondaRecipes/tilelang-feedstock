@@ -1,0 +1,48 @@
+#!/bin/bash
+set -exo pipefail
+
+# Keep the wheel version exactly the release version — suppress upstream's
+# "+cuXXX.git<sha>" local version label (see version_provider.py)
+export NO_VERSION_LABEL=1
+
+CMAKE_ARGS="${CMAKE_ARGS:-} -DCMAKE_BUILD_TYPE=Release"
+CMAKE_ARGS="${CMAKE_ARGS} -DCMAKE_PREFIX_PATH=${PREFIX}"
+# Use conda's libz3 (headers + Z3Config.cmake in $PREFIX) instead of the
+# pip z3-solver site-packages layout
+CMAKE_ARGS="${CMAKE_ARGS} -DUSE_PYPI_Z3=OFF"
+
+if [[ "${gpu_variant}" == "cuda" ]]; then
+    CMAKE_ARGS="${CMAKE_ARGS} -DUSE_CUDA=ON"
+    # Upstream CMake force-sets CMAKE_CUDA_COMPILER to CUDAToolkit_BIN_DIR/nvcc.
+    # Root the toolkit at the build env so that resolves to $BUILD_PREFIX/bin/nvcc
+    # (the functional wrapper whose nvcc.profile locates cicc/nvvm); the raw copy
+    # under targets/<arch>/bin has a degenerate profile and dies with
+    # `sh: cicc: command not found` during CMake CUDA compiler identification.
+    CMAKE_ARGS="${CMAKE_ARGS} -DCUDAToolkit_ROOT=${BUILD_PREFIX}"
+    # FindCUDAToolkit still prefers the raw targets/<arch>/bin/nvcc even with
+    # the root hint; select the wrapper explicitly (patch 0001 makes upstream
+    # respect it)
+    CMAKE_ARGS="${CMAKE_ARGS} -DCMAKE_CUDA_COMPILER=${BUILD_PREFIX}/bin/nvcc"
+elif [[ "${gpu_variant}" == "metal" ]]; then
+    CMAKE_ARGS="${CMAKE_ARGS} -DUSE_METAL=ON"
+fi
+
+export CMAKE_ARGS
+export CMAKE_BUILD_PARALLEL_LEVEL=${CPU_COUNT}
+
+${PYTHON} -m pip install . -vv --no-deps --no-build-isolation
+
+# Upstream forces INSTALL_RPATH to $ORIGIN-relative entries only (wheel layout),
+# so libz3 in $PREFIX/lib is not reachable at runtime. Append a $PREFIX/lib
+# rpath; conda-build relocates it to a relative path at packaging time.
+for lib in "${SP_DIR}"/tilelang/lib/*; do
+    if [[ "$(uname)" == "Darwin" ]]; then
+        # skip libs that already carry the rpath (CMake adds it on macOS for
+        # some targets); -add_rpath hard-errors on duplicates
+        if ! otool -l "${lib}" | grep -q "path ${PREFIX}/lib "; then
+            install_name_tool -add_rpath "${PREFIX}/lib" "${lib}"
+        fi
+    else
+        patchelf --add-rpath "${PREFIX}/lib" "${lib}"
+    fi
+done

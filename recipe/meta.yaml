@@ -1,0 +1,168 @@
+{% set name = "tilelang" %}
+{% set version = "0.1.9" %}
+{% set base_build_num = 0 %}
+{% set cuda_enabled = (gpu_variant | default("none")) == "cuda" %}
+{% set metal_enabled = (gpu_variant | default("none")) == "metal" %}
+# CUDA builds get +200, Metal builds +100 (pytorch-style variant offsets)
+{% set build_num = base_build_num + 200 if cuda_enabled else base_build_num %}
+{% set build_num = base_build_num + 100 if metal_enabled else build_num %}
+{% set variant_tag = "cuda" ~ ((cuda_compiler_version | default("")) | replace(".", "")) if cuda_enabled else (gpu_variant | default("none")) %}
+
+package:
+  name: {{ name }}
+  version: {{ version }}
+
+source:
+  url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
+  sha256: 287f727c913bb648fcf6c1968809ba3390e55eeed257a5c6bb9a80bc05966af4
+  patches:
+    # upstream unconditionally overrides CMAKE_CUDA_COMPILER with the raw
+    # targets/<arch>/bin/nvcc, which cannot locate cicc in conda's split
+    # toolchain; make the override conditional so build.sh can pass the
+    # functional $BUILD_PREFIX/bin/nvcc wrapper
+    - patches/0001-Respect-preset-CMAKE_CUDA_COMPILER.patch
+    # the tvm fork's Z3 soname rewrite assumes the pip z3 layout (Z3_LIBRARY
+    # set); with conda's config-mode libz3 there is nothing to rewrite
+    - patches/0002-Skip-Z3-soname-rewrite-without-Z3_LIBRARY.patch
+    # avoid needing git in build: version_provider's `git rev-parse` raises
+    # FileNotFoundError without git; guarded, it falls back to the sdist's
+    # .git_commit.txt pin
+    - patches/0003-Tolerate-missing-git-in-version_provider.patch
+
+build:
+  # Upstream supports Linux (CUDA/ROCm) and macOS arm64 (Metal) only: no Windows
+  # support (CUDA/HIP dlopen stubs are POSIX-only), and no macOS x86_64 wheels.
+  # osx-64 is additionally unbuildable here: pytorch on pkgs/main osx-64 tops out
+  # at 2.6 and apache-tvm-ffi is unavailable there.
+  # py<39 documents upstream's requires-python >=3.9 floor (build matrix starts at 3.10)
+  skip: true  # [win or (osx and x86_64) or py<39]
+  number: {{ build_num }}
+  string: {{ variant_tag }}_py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ build_num }}
+  missing_dso_whitelist:
+    # libtvm_ffi is intentionally not bundled (mirrors upstream wheel's
+    # auditwheel --exclude): it is provided at runtime by the apache-tvm-ffi
+    # package and reached via the $ORIGIN/../../tvm_ffi/lib install rpath.
+    - "**/libtvm_ffi.so"
+    - "**/libtvm_ffi.dylib"
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+    - {{ compiler('cuda') }}  # [gpu_variant == "cuda"]
+    - {{ stdlib('c') }}
+    - cmake >=3.26.1
+    - ninja-base
+    # upstream build requirement; CMake install also uses it to strip the
+    # libcuda DT_NEEDED entry from the dlopen-stub libraries
+    - patchelf >=0.17.2  # [linux]
+  host:
+    - python
+    - pip
+    - scikit-build-core
+    - cython >=3.1.0
+    # Built with -DUSE_PYPI_Z3=OFF: conda libz3 provides headers + Z3Config.cmake,
+    # replacing upstream's pip z3-solver site-packages layout
+    - libz3 4.15.4
+    - cuda-cudart-dev {{ cuda_compiler_version }}.*  # [gpu_variant == "cuda"]
+    - cuda-nvrtc-dev {{ cuda_compiler_version }}.*   # [gpu_variant == "cuda"]
+    # host cuda_runtime.h does `#include "crt/host_config.h"`; the crt headers
+    # ship with the nvcc split packages, so without this CMake's CUDA compiler
+    # identification fails with `crt/host_config.h: No such file or directory`
+    - cuda-crt-dev_{{ target_platform }} {{ cuda_compiler_version }}.*  # [gpu_variant == "cuda"]
+  run:
+    - python
+    # Pinned to the exact version tested against (upstream range is
+    # ~=0.1.0,>=0.1.2): apache-tvm-ffi may introduce breaking changes in ANY
+    # new version, and tilelang compiles against its bundled tvm-ffi headers
+    # while loading libtvm_ffi from this package at runtime. 0.1.10 is the
+    # combination upstream vllm ships with tilelang 0.1.9 (vllm pins
+    # tilelang==0.1.9 + apache-tvm-ffi==0.1.10). Any build number is fine.
+    - apache-tvm-ffi ==0.1.10
+    - torch-c-dlpack-ext  # [py<314]
+    - cloudpickle
+    # upstream fp4 extra additionally wants ml_dtypes >=0.5.1
+    - ml_dtypes
+    - numpy >=1.23.5
+    - psutil
+    - pytorch        # [linux] analint: cbc_dep_in_run_missing_from_host  # runtime-only dep: tilelang does not link libtorch (integrates via tvm-ffi/DLPack)
+    - pytorch >=2.4  # [osx] analint: cbc_dep_in_run_missing_from_host  # runtime-only dep: tilelang does not link libtorch (integrates via tvm-ffi/DLPack)
+    - setuptools     # [osx] analint: python_build_tools_in_host  # runtime dep: tilelang JIT-compiles torch extensions on macOS (upstream Darwin marker)
+    - tqdm >=4.62.3
+    - typing-extensions >=4.10.0
+    - z3-solver >=4.13.0,<4.15.5
+    # libtvm links libz3 directly (soname libz3.so.4.15); pkgs/main libz3 has
+    # no run_exports, so the run dep must be explicit (overlinking check)
+    - libz3 >=4.15.4,<4.16.0a0
+    # tilelang JIT-compiles generated kernels at runtime with nvcc (links -lcuda,
+    # includes cuda_runtime.h / CCCL headers), so ship the toolchain in run.
+    # cuda-nvcc-impl (not just cuda-nvcc-tools): the bare tools package lacks
+    # cicc and the crt headers in the targets/ layout nvcc's profile expects;
+    # verified end to end on a g5 A10G (sm_86) dev instance
+    - cuda-nvcc-impl {{ cuda_compiler_version }}.*   # [gpu_variant == "cuda"]
+    - cuda-cudart-dev {{ cuda_compiler_version }}.*  # [gpu_variant == "cuda"]
+    - cuda-cccl        # [gpu_variant == "cuda"]
+    - cuda-driver-dev  # [gpu_variant == "cuda"]
+  run_constrained:
+    # Marker only (arrow-cpp pattern): import works on CPU-only machines via the
+    # dlopen CUDA stubs, and downstream CPU consumers (vllm) must stay installable,
+    # so __cuda is not a hard run dep here.
+    - __cuda  # [gpu_variant == "cuda"]
+    # upstream "vis" extra (matplotlib) is unbounded — nothing to constrain, omitted
+
+test:
+  imports:
+    - tilelang
+  requires:
+    - pip
+    - pytest
+    # The JIT smoke test shells out to nvcc, which needs a host C++ compiler in
+    # the test env alongside the CUDA toolchain (triton-feedstock precedent)
+    - {{ compiler('cuda') }}  # [gpu_variant == "cuda"]
+    - {{ compiler('cxx') }}   # [gpu_variant == "cuda"]
+  source_files:
+    - testing/conftest.py
+    - testing/python/kernel/test_tilelang_kernel_element_wise_add.py  # [gpu_variant == "cuda"]
+    - testing/python/cuda/test_cuda_f32x2_intrinsics.py               # [gpu_variant == "cuda"]
+    - testing/python/metal/test_metal_codegen_linux.py                # [gpu_variant == "metal"]
+  commands:
+    - pip check
+    - python -c "import tilelang; print(tilelang.__version__)"
+    # GPU smoke: codegen + runtime nvcc JIT + kernel run on the CI GPU.
+    # Private TMPDIR + cleanup flag: tilelang keeps JIT debug tempdirs by
+    # default under a shared /tmp/tvm-debug-mode-tempdirs parent, which fails
+    # with EACCES on reused CI workers where another user owns that dir.
+    # Compute-capability guard: tilelang 0.1.9 device headers do not compile
+    # for sm_75/Turing (bf16 __hfma needs sm_80+; SM75 cute MMA atom missing).
+    # Current CI GPU pools (g4dn T4 / T4G) are all sm_75, so the on-device run
+    # only executes if the pools ever gain sm_80+ workers; the codegen test
+    # below covers the JIT path on every worker.
+    - CAP=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 | cut -d. -f1); if [ "${CAP:-0}" -ge 8 ]; then TMPDIR=$(mktemp -d) TILELANG_CLEANUP_TEMP_FILES=1 pytest -v testing/python/kernel/test_tilelang_kernel_element_wise_add.py; else echo "Skipping kernel smoke test - GPU is pre-sm_80 (tilelang 0.1.9 requires sm_80+)"; fi  # [gpu_variant == "cuda"]
+    # JIT smoke that works on sm_75 workers: upstream's codegen-only tests
+    # lower + nvcc-compile at an explicit sm_80 target (no kernel execution,
+    # so no sm_80 GPU needed) and assert on the generated CUDA source —
+    # exercising the compiled codegen libs and the runtime nvcc toolchain
+    - TMPDIR=$(mktemp -d) TILELANG_CLEANUP_TEMP_FILES=1 pytest -v -k "codegen" testing/python/cuda/test_cuda_f32x2_intrinsics.py  # [gpu_variant == "cuda"]
+    # Metal smoke: full lowering to Metal kernel source, no GPU runtime needed —
+    # the run-on-device metal tests need torch MPS (macOS >=14) and CI Macs run 13
+    - pytest -v testing/python/metal/test_metal_codegen_linux.py                # [gpu_variant == "metal"]
+
+about:
+  home: https://github.com/tile-ai/tilelang
+  license: MIT
+  license_family: MIT
+  license_file:
+    - LICENSE
+    - THIRDPARTYNOTICES.txt
+  summary: A tile level programming language to generate high performance code
+  description: |
+    TileLang is a domain-specific language built on Apache TVM for writing
+    high-performance GPU kernels (GEMM, attention, and other ML operators) at
+    the tile level. It generates and JIT-compiles CUDA kernels on Linux and
+    Metal kernels on macOS, integrating with PyTorch through the TVM FFI.
+  doc_url: https://tilelang.com
+  dev_url: https://github.com/tile-ai/tilelang
+
+extra:
+  recipe-maintainers:
+    - xkong-anaconda

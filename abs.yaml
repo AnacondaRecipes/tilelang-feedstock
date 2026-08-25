@@ -1,0 +1,2 @@
+# TVM is compiled from the bundled source tree; allow a long build
+task_timeout: 28800

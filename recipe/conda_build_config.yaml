@@ -1,0 +1,19 @@
+# CUDA-only on linux (12.9 + 13.0, matching the aggregate CUDA matrix and the
+# pytorch/vllm variants on pkgs/main); Metal on osx-arm64. The "none" entries
+# exist so gpu_variant renders on platforms meta.yaml skips (win, osx-64).
+gpu_variant:
+  - none   # [win or (osx and x86_64)]
+  - metal  # [osx and arm64]
+  - cuda   # [linux]
+  - cuda   # [linux]
+
+cuda_compiler_version:  # [linux]
+  - 12.9                # [linux]
+  - 13.0                # [linux]
+
+# NOTE: this replaces the aggregate's zip_keys (python/numpy) — harmless here
+# because this recipe does not use the CBC numpy variable.
+zip_keys:                    # [linux]
+  -                          # [linux]
+    - gpu_variant            # [linux]
+    - cuda_compiler_version  # [linux]
