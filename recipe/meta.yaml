@@ -1,5 +1,5 @@
 {% set name = "tilelang" %}
-{% set version = "0.1.9" %}
+{% set version = "0.1.12" %}
 {% set base_build_num = 0 %}
 {% set cuda_enabled = (gpu_variant | default("none")) == "cuda" %}
 {% set metal_enabled = (gpu_variant | default("none")) == "metal" %}
@@ -14,20 +14,20 @@ package:
 
 source:
   url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
-  sha256: 287f727c913bb648fcf6c1968809ba3390e55eeed257a5c6bb9a80bc05966af4
+  sha256: 595b39581d099a53f875bd8d553863e7e4f58998052b58764f5472cbfbb87043
   patches:
     # upstream unconditionally overrides CMAKE_CUDA_COMPILER with the raw
     # targets/<arch>/bin/nvcc, which cannot locate cicc in conda's split
     # toolchain; make the override conditional so build.sh can pass the
     # functional $BUILD_PREFIX/bin/nvcc wrapper
-    - patches/0001-Respect-preset-CMAKE_CUDA_COMPILER.patch
+    #- patches/0001-Respect-preset-CMAKE_CUDA_COMPILER.patch
     # the tvm fork's Z3 soname rewrite assumes the pip z3 layout (Z3_LIBRARY
     # set); with conda's config-mode libz3 there is nothing to rewrite
-    - patches/0002-Skip-Z3-soname-rewrite-without-Z3_LIBRARY.patch
+    #- patches/0002-Skip-Z3-soname-rewrite-without-Z3_LIBRARY.patch
     # avoid needing git in build: version_provider's `git rev-parse` raises
     # FileNotFoundError without git; guarded, it falls back to the sdist's
     # .git_commit.txt pin
-    - patches/0003-Tolerate-missing-git-in-version_provider.patch
+    #- patches/0003-Tolerate-missing-git-in-version_provider.patch
 
 build:
   # Upstream supports Linux (CUDA/ROCm) and macOS arm64 (Metal) only: no Windows
@@ -78,7 +78,7 @@ requirements:
     # while loading libtvm_ffi from this package at runtime. 0.1.10 is the
     # combination upstream vllm ships with tilelang 0.1.9 (vllm pins
     # tilelang==0.1.9 + apache-tvm-ffi==0.1.10). Any build number is fine.
-    - apache-tvm-ffi ==0.1.10
+    - apache-tvm-ffi ==0.1.11
     - torch-c-dlpack-ext  # [py<314]
     - cloudpickle
     # upstream fp4 extra additionally wants ml_dtypes >=0.5.1
