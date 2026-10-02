@@ -28,6 +28,12 @@ source:
     # FileNotFoundError without git; guarded, it falls back to the sdist's
     # .git_commit.txt pin
     #- patches/0003-Tolerate-missing-git-in-version_provider.patch
+    # upstream's tvm links libz3 via ${Z3_LIBRARY}, which only the pip-layout
+    # FindZ3 module (USE_PYPI_Z3=ON) defines; with conda's config-mode libz3
+    # (Z3Config.cmake) only the z3::libz3 target exists, so nothing is linked
+    # and libtvm fails with undefined Z3_* references. Link z3::libz3 when
+    # Z3_LIBRARY is unset.
+    - patches/z3-link.patch
 
 build:
   # Upstream supports Linux (CUDA/ROCm) and macOS arm64 (Metal) only: no Windows
@@ -61,6 +67,7 @@ requirements:
     - pip
     - scikit-build-core
     - cython >=3.1.0
+    - z3-solver >=4.13.0,<4.15.5
     # Built with -DUSE_PYPI_Z3=OFF: conda libz3 provides headers + Z3Config.cmake,
     # replacing upstream's pip z3-solver site-packages layout
     - libz3 4.15.4
