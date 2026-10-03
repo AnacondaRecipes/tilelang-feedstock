@@ -8,7 +8,7 @@ gpu_variant:
   - cuda   # [linux]
 
 cuda_compiler_version:  # [linux]
-  - 12.9                # [linux]
+  - 12.9                # [linux and not aarch64]
   - 13.0                # [linux]
 
 # NOTE: this replaces the aggregate's zip_keys (python/numpy) — harmless here
