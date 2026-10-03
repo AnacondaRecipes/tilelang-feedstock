@@ -4,7 +4,7 @@
 gpu_variant:
   - none   # [win or (osx and x86_64)]
   - metal  # [osx and arm64]
-  - cuda   # [linux]
+  - cuda   # [linux and not aarch64]
   - cuda   # [linux]
 
 cuda_compiler_version:  # [linux]
