@@ -1,0 +1,15 @@
+--- a/3rdparty/tvm/CMakeLists.txt
++++ b/3rdparty/tvm/CMakeLists.txt
+@@ -476,7 +476,11 @@
+   find_package(Z3 REQUIRED)
+   list(APPEND COMPILER_SRCS src/target/z3/z3_prover_on.cc)
+   include_directories(${Z3_INCLUDE_DIR})
+-  list(APPEND TVM_LINKER_LIBS ${Z3_LIBRARY})
++  if (NOT Z3_LIBRARY AND TARGET z3::libz3)
++    list(APPEND TVM_LINKER_LIBS z3::libz3)
++  else()
++    list(APPEND TVM_LINKER_LIBS ${Z3_LIBRARY})
++  endif()
+ else()
+   list(APPEND COMPILER_SRCS src/target/z3/z3_prover_off.cc)
+ endif()
