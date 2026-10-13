@@ -146,7 +146,7 @@ test:
     # only executes if the pools ever gain sm_80+ workers; the codegen test
     # below covers the JIT path on every worker.
     #- CAP=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 | cut -d. -f1); if [ "${CAP:-0}" -ge 8 ]; then TMPDIR=$(mktemp -d) TILELANG_CLEANUP_TEMP_FILES=1 pytest -v testing/python/kernel/test_tilelang_kernel_element_wise_add.py; else echo "Skipping kernel smoke test - GPU is pre-sm_80 (tilelang 0.1.9 requires sm_80+)"; fi  # [gpu_variant == "cuda"]
-    - TILELANG_CLEANUP_TEMP_FILES=1 pytest -v testing/python/kernel/test_tilelang_kernel_gemm_sm75.py
+    - TILELANG_CLEANUP_TEMP_FILES=1 pytest -v testing/python/kernel/test_tilelang_kernel_gemm_sm75.py # [gpu_variant == "cuda" and not aarch64]
     # JIT smoke that works on sm_75 workers: upstream's codegen-only tests
     # lower + nvcc-compile at an explicit sm_80 target (no kernel execution,
     # so no sm_80 GPU needed) and assert on the generated CUDA source —
