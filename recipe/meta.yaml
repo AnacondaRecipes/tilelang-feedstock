@@ -37,6 +37,7 @@ build:
     # package and reached via the $ORIGIN/../../tvm_ffi/lib install rpath.
     - "**/libtvm_ffi.so"
     - "**/libtvm_ffi.dylib"
+    - "**/libtvm_ffi.dll"
 
 requirements:
   build:
@@ -80,7 +81,7 @@ requirements:
     - ml_dtypes
     - numpy >=1.23.5
     - psutil
-    - pytorch        # [linux] analint: cbc_dep_in_run_missing_from_host  # runtime-only dep: tilelang does not link libtorch (integrates via tvm-ffi/DLPack)
+    - pytorch        # [linux or win] analint: cbc_dep_in_run_missing_from_host  # runtime-only dep: tilelang does not link libtorch (integrates via tvm-ffi/DLPack)
     - pytorch >=2.4  # [osx] analint: cbc_dep_in_run_missing_from_host  # runtime-only dep: tilelang does not link libtorch (integrates via tvm-ffi/DLPack)
     - setuptools     # [osx] analint: python_build_tools_in_host  # runtime dep: tilelang JIT-compiles torch extensions on macOS (upstream Darwin marker)
     - tqdm >=4.62.3
@@ -127,14 +128,14 @@ test:
     - python -c "import tilelang; print(tilelang.__version__)"
     # GPU smoke: codegen + runtime nvcc JIT + kernel run on the CI GPU.
     # aarch64 excluded because test instances do not support >sm_75, while pytorch on linux-aarch64 only supports >=sm_80
-    - TILELANG_CLEANUP_TEMP_FILES=1 pytest -v testing/python/kernel/test_tilelang_kernel_gemm_simt.py::test_assert_tl_matmul  # [gpu_variant == "cuda" and not aarch64]
+    - TILELANG_CLEANUP_TEMP_FILES=1 pytest -v testing/python/kernel/test_tilelang_kernel_gemm_simt.py::test_assert_tl_matmul  # [gpu_variant == "cuda" and not aarch64 and not win]
     # aarch64 excluded because test instances do not support >sm_75, while pytorch on linux-aarch64 only supports >=sm_80
-    - TILELANG_CLEANUP_TEMP_FILES=1 pytest -v testing/python/kernel/test_tilelang_kernel_gemm_sm75.py # [gpu_variant == "cuda" and not aarch64]
+    - TILELANG_CLEANUP_TEMP_FILES=1 pytest -v testing/python/kernel/test_tilelang_kernel_gemm_sm75.py # [gpu_variant == "cuda" and not aarch64 and not win]
     # JIT smoke that works on sm_75 workers: upstream's codegen-only tests
     # lower + nvcc-compile at an explicit sm_80 target (no kernel execution,
     # so no sm_80 GPU needed) and assert on the generated CUDA source —
     # exercising the compiled codegen libs and the runtime nvcc toolchain
-    - TMPDIR=$(mktemp -d) TILELANG_CLEANUP_TEMP_FILES=1 pytest -v -k "codegen" testing/python/cuda/test_cuda_f32x2_intrinsics.py  # [gpu_variant == "cuda"]
+    - TMPDIR=$(mktemp -d) TILELANG_CLEANUP_TEMP_FILES=1 pytest -v -k "codegen" testing/python/cuda/test_cuda_f32x2_intrinsics.py  # [gpu_variant == "cuda" and not win]
     # Metal smoke: full lowering to Metal kernel source, no GPU runtime needed —
     # the run-on-device metal tests need torch MPS (macOS >=14) and CI Macs run 13
     - pytest -v testing/python/metal/test_metal_codegen_linux.py                # [gpu_variant == "metal"]
