@@ -28,8 +28,7 @@ build:
   # support (CUDA/HIP dlopen stubs are POSIX-only), and no macOS x86_64 wheels.
   # osx-64 is additionally unbuildable here: pytorch on pkgs/main osx-64 tops out
   # at 2.6 and apache-tvm-ffi is unavailable there.
-  # py<39 documents upstream's requires-python >=3.9 floor (build matrix starts at 3.10)
-  skip: true  # [win or (osx and x86_64) or py<39]
+  skip: true  # [win or (osx and x86_64) or py<310]
   number: {{ build_num }}
   string: {{ variant_tag }}_py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ build_num }}
   missing_dso_whitelist:
@@ -128,9 +127,9 @@ test:
     - pip check
     - python -c "import tilelang; print(tilelang.__version__)"
     # GPU smoke: codegen + runtime nvcc JIT + kernel run on the CI GPU.
-    # aarch64 excluded because test instances do not support >sm_75
+    # aarch64 excluded because test instances do not support >sm_75, while pytorch on linux-aarch64 only supports >=sm_80
     - TILELANG_CLEANUP_TEMP_FILES=1 pytest -v testing/python/kernel/test_tilelang_kernel_gemm_simt.py::test_assert_tl_matmul  # [gpu_variant == "cuda" and not aarch64]
-    # aarch64 excluded because test instances do not support >sm_75
+    # aarch64 excluded because test instances do not support >sm_75, while pytorch on linux-aarch64 only supports >=sm_80
     - TILELANG_CLEANUP_TEMP_FILES=1 pytest -v testing/python/kernel/test_tilelang_kernel_gemm_sm75.py # [gpu_variant == "cuda" and not aarch64]
     # JIT smoke that works on sm_75 workers: upstream's codegen-only tests
     # lower + nvcc-compile at an explicit sm_80 target (no kernel execution,
