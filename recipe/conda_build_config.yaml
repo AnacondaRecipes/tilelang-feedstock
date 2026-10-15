@@ -10,7 +10,7 @@ gpu_variant:
   - cuda   # [(win and x64) or linux]
 
 cuda_compiler_version:  # [linux or (win and x64)]
-  - none                # (win and x64)
+  - none                # [(win and x64)]
   - 12.9                # [(win and x64) or (linux and not aarch64)]
   - 13.0                # [(win and x64) or linux]
 
