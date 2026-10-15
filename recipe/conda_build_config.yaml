@@ -1,6 +1,7 @@
 # CUDA-only on linux (12.9 + 13.0, matching the aggregate CUDA matrix and the
 # pytorch/vllm variants on pkgs/main); Metal on osx-arm64. The "none" entries
 # exist so gpu_variant renders on platforms meta.yaml skips (win, osx-64).
+# on linux-aarch64, only CUDA 13 is supported
 gpu_variant:
   - none   # [win or (osx and x86_64)]
   - metal  # [osx and arm64]
