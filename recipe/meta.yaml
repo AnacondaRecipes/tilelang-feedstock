@@ -28,7 +28,7 @@ build:
   # support (CUDA/HIP dlopen stubs are POSIX-only), and no macOS x86_64 wheels.
   # osx-64 is additionally unbuildable here: pytorch on pkgs/main osx-64 tops out
   # at 2.6 and apache-tvm-ffi is unavailable there.
-  skip: true  # [win or (osx and x86_64) or py<310]
+  skip: true  # [(win and arm64) or (osx and x86_64) or py<310]
   number: {{ build_num }}
   string: {{ variant_tag }}_py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ build_num }}
   missing_dso_whitelist:
