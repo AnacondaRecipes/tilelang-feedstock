@@ -128,8 +128,9 @@ test:
     - pip check
     - python -c "import tilelang; print(tilelang.__version__)"
     # GPU smoke: codegen + runtime nvcc JIT + kernel run on the CI GPU.
-    - TILELANG_CLEANUP_TEMP_FILES=1 pytest -v testing/python/kernel/test_tilelang_kernel_gemm_simt.py::test_assert_tl_matmul  # [gpu_variant == "cuda"]
-    # aarch64 excluded because pytorch does not support sm_80 on linux-aarch64.
+    # aarch64 excluded because test instances do not support >sm_75
+    - TILELANG_CLEANUP_TEMP_FILES=1 pytest -v testing/python/kernel/test_tilelang_kernel_gemm_simt.py::test_assert_tl_matmul  # [gpu_variant == "cuda" and not aarch64]
+    # aarch64 excluded because test instances do not support >sm_75
     - TILELANG_CLEANUP_TEMP_FILES=1 pytest -v testing/python/kernel/test_tilelang_kernel_gemm_sm75.py # [gpu_variant == "cuda" and not aarch64]
     # JIT smoke that works on sm_75 workers: upstream's codegen-only tests
     # lower + nvcc-compile at an explicit sm_80 target (no kernel execution,
