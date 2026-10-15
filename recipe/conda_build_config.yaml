@@ -6,17 +6,16 @@
 gpu_variant:
   - none   # [win or (osx and x86_64)]
   - metal  # [osx and arm64]
-  - cuda   # [(win and x64) or (linux and not aarch64)]
-  - cuda   # [(win and x64) or linux]
+  - cuda   # [(linux and not aarch64)]
+  - cuda   # [linux]
 
-cuda_compiler_version:  # [linux or (win and x64)]
-  - none                # [(win and x64)]
-  - 12.9                # [(win and x64) or (linux and not aarch64)]
-  - 13.0                # [(win and x64) or linux]
+cuda_compiler_version:  # [linux]
+  - 12.9                # [(linux and not aarch64)]
+  - 13.0                # [linux]
 
 # NOTE: this replaces the aggregate's zip_keys (python/numpy) — harmless here
 # because this recipe does not use the CBC numpy variable.
-zip_keys:                    # [linux or (win and x64)]
-  -                          # [linux or (win and x64)]
-    - gpu_variant            # [linux or (win and x64)]
-    - cuda_compiler_version  # [linux or (win and x64)]
+zip_keys:                    # [linux]
+  -                          # [linux]
+    - gpu_variant            # [linux]
+    - cuda_compiler_version  # [linux]

@@ -24,11 +24,13 @@ source:
     - patches/0001-Allow-z3-to-link-in-conda-environment.patch
 
 build:
-  # Upstream supports Linux (CUDA/ROCm) and macOS arm64 (Metal) only: no Windows
-  # support (CUDA/HIP dlopen stubs are POSIX-only), and no macOS x86_64 wheels.
+  # Upstream supports Linux (CUDA/ROCm) and macOS arm64 (Metal)
+  # Windows support appears to be available (there is a windows amd64
+  # wheel available), but building from scratch may require clang, so
+  # we're not building it at the moment
   # osx-64 is additionally unbuildable here: pytorch on pkgs/main osx-64 tops out
   # at 2.6 and apache-tvm-ffi is unavailable there.
-  skip: true  # [(win and arm64) or (osx and x86_64) or py<310]
+  skip: true  # [(win) or (osx and x86_64) or py<310]
   number: {{ build_num }}
   string: {{ variant_tag }}_py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ build_num }}
   missing_dso_whitelist:
