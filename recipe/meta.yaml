@@ -56,7 +56,6 @@ requirements:
     # pyproject.toml does not list an upper bound for cython, but newer 3.3.x versions require a newer
     # python abi (Py_LIMITED) than the cp38 listed in pyproject.toml.
     - cython >=3.1.0,<3.3
-    - z3-solver >=4.13.0,<4.15.5
     # Built with -DUSE_PYPI_Z3=OFF: conda libz3 provides headers + Z3Config.cmake,
     # replacing upstream's pip z3-solver site-packages layout
     - libz3 4.15.4
