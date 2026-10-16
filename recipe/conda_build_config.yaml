@@ -1,14 +1,16 @@
 # CUDA-only on linux (12.9 + 13.0, matching the aggregate CUDA matrix and the
 # pytorch/vllm variants on pkgs/main); Metal on osx-arm64. The "none" entries
 # exist so gpu_variant renders on platforms meta.yaml skips (win, osx-64).
+# on linux-aarch64, only CUDA 13 is supported by pytorch, a required tilelang
+# dependency, so we skip the 12.9 CUDA builds for that configuration.
 gpu_variant:
   - none   # [win or (osx and x86_64)]
   - metal  # [osx and arm64]
-  - cuda   # [linux]
+  - cuda   # [(linux and not aarch64)]
   - cuda   # [linux]
 
 cuda_compiler_version:  # [linux]
-  - 12.9                # [linux]
+  - 12.9                # [(linux and not aarch64)]
   - 13.0                # [linux]
 
 # NOTE: this replaces the aggregate's zip_keys (python/numpy) — harmless here
